@@ -1,6 +1,6 @@
 _target_: pangaea.datasets.xview2.xView2
 dataset_name: xView2
-root_path: ./data/xView2
+root_path: C:\Users\Student\Documents\IIB\xbd
 download_url: https://the-dataset-is-not-publicly-available.com
 auto_download: False
 img_size: 1024
@@ -9,7 +9,7 @@ multi_modal: False
 oversample_building_damage: True
 
 # classes
-ignore_index: -1
+ignore_index: 255
 num_classes: 5
 classes:
   - No building

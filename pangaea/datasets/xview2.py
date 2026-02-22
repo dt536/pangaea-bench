@@ -111,28 +111,49 @@ class xView2(RawGeoFMDataset):
 
         self.all_files = self.get_all_files()
 
-    def get_all_files(self) -> Sequence[str]:
-        all_files = []
-        if self.split == "test":
-            data_dirs = [os.path.join(self.root_path, "test")]
-        else:
-            # Train and val consist of the smaller train and the larger tier3 set.
-            data_dirs = [os.path.join(self.root_path, d) for d in ["train", "tier3"]]
+    # def get_all_files(self) -> Sequence[str]:
+    #     all_files = []
+    #     if self.split == "test":
+    #         data_dirs = [os.path.join(self.root_path, "test")]
+    #     else:
+    #         # Train and val consist of the smaller train and the larger tier3 set.
+    #         data_dirs = [os.path.join(self.root_path, d) for d in ["train", "tier3"]]
 
-        for d in data_dirs:
-            for f in sorted(os.listdir(os.path.join(d, 'images'))):
-                if '_pre_disaster.png' in f:
-                    all_files.append(os.path.join(d, 'images', f))
+    #     for d in data_dirs:
+    #         for f in sorted(os.listdir(os.path.join(d, 'images'))):
+    #             if '_pre_disaster.png' in f:
+    #                 all_files.append(os.path.join(d, 'images', f))
         
-        if self.split != "test":
-            train_val_idcs = self.get_stratified_train_val_split(all_files)
+    #     if self.split != "test":
+    #         train_val_idcs = self.get_stratified_train_val_split(all_files)
             
-            if self.split == "train" and self.oversample_building_damage:
-                train_val_idcs[self.split] = self.oversample_building_files(all_files, train_val_idcs[self.split])
+    #         if self.split == "train" and self.oversample_building_damage:
+    #             train_val_idcs[self.split] = self.oversample_building_files(all_files, train_val_idcs[self.split])
 
             
-            all_files = [all_files[i] for i in train_val_idcs[self.split]]
+    #         all_files = [all_files[i] for i in train_val_idcs[self.split]]
             
+
+    #     return all_files
+
+    def get_all_files(self) -> Sequence[str]:
+        # custom split
+        split_dir = os.path.join(self.root_path, self.split)
+        pre_dir = os.path.join(split_dir, "pre")
+        if not os.path.isdir(pre_dir):
+            raise FileNotFoundError(f"Missing pre/ folder: {pre_dir}")
+
+        exts = (".tif", ".tiff", ".TIF", ".TIFF")
+        all_files = [
+            os.path.join(pre_dir, f)
+            for f in sorted(os.listdir(pre_dir))
+            if f.endswith(exts) and "_pre_disaster" in f
+        ]
+
+        if self.split == "train" and self.oversample_building_damage:
+            train_idxs = np.arange(len(all_files))
+            train_idxs = self.oversample_building_files(all_files, train_idxs)
+            all_files = [all_files[i] for i in train_idxs]
 
         return all_files
 
@@ -156,8 +177,16 @@ class xView2(RawGeoFMDataset):
             fl = np.zeros((4,), dtype=bool)
             # Only read images that are included in train_idxs
             if i in train_idxs: 
-                msk1 = cv2.imread(fn.replace('/images/', '/masks/').replace('_pre_disaster', '_post_disaster'),
-                                cv2.IMREAD_UNCHANGED)
+                # msk1 = cv2.imread(fn.replace('/images/', '/masks/').replace('_pre_disaster', '_post_disaster'),
+                #                 cv2.IMREAD_UNCHANGED)
+                
+                p = pathlib.Path(fn)
+                split_root = p.parent.parent
+                base = p.stem.replace("_pre_disaster", "")
+                tgt_path = split_root / "target" / f"{base}_target.png"
+
+                msk1 = cv2.imread(str(tgt_path), cv2.IMREAD_UNCHANGED)
+
                 for c in range(1, 5):
                     fl[c - 1] = c in msk1
             file_classes.append(fl)
@@ -180,37 +209,66 @@ class xView2(RawGeoFMDataset):
     def __len__(self) -> int:
         return len(self.all_files)
 
-    def __getitem__(self, idx: int) -> Dict[str, Union[torch.Tensor,  Any, str]]:
+    # def __getitem__(self, idx: int) -> Dict[str, Union[torch.Tensor,  Any, str]]:
         
-        fn = self.all_files[idx]
+    #     fn = self.all_files[idx]
 
-        img_pre = cv2.imread(fn, cv2.IMREAD_COLOR)
-        img_post = cv2.imread(fn.replace('_pre_', '_post_'), cv2.IMREAD_COLOR)
+    #     img_pre = cv2.imread(fn, cv2.IMREAD_COLOR)
+    #     img_post = cv2.imread(fn.replace('_pre_', '_post_'), cv2.IMREAD_COLOR)
 
 
-        #msk_pre = cv2.imread(fn.replace('/images/', '/masks/'), cv2.IMREAD_UNCHANGED)
-        msk_post = cv2.imread(fn.replace('/images/', '/masks/').replace(
-            '_pre_disaster', '_post_disaster'), cv2.IMREAD_UNCHANGED)
+    #     #msk_pre = cv2.imread(fn.replace('/images/', '/masks/'), cv2.IMREAD_UNCHANGED)
+    #     msk_post = cv2.imread(fn.replace('/images/', '/masks/').replace(
+    #         '_pre_disaster', '_post_disaster'), cv2.IMREAD_UNCHANGED)
         
-        #msk = np.stack([msk_pre, msk_post], axis=0)
-        msk = msk_post
-        img = np.stack([img_pre, img_post], axis=0) 
+    #     #msk = np.stack([msk_pre, msk_post], axis=0)
+    #     msk = msk_post
+    #     img = np.stack([img_pre, img_post], axis=0) 
 
-        # Reshaping tensors from (T, H, W, C) to (C, T, H, W)
+    #     # Reshaping tensors from (T, H, W, C) to (C, T, H, W)
+    #     img = torch.from_numpy(img.transpose((3, 0, 1, 2))).float()
+    #     # img_pre = torch.from_numpy(img_pre.transpose((2, 0, 1))).float()
+    #     # img_post = torch.from_numpy(img_post.transpose((2, 0, 1))).float()
+    #     msk = torch.from_numpy(msk).long()
+
+
+    #     return {
+    #         'image': {
+    #                 'optical': img,
+    #                 },
+    #         'target': msk,  
+    #         'metadata': {"filename":fn}
+    #     }
+
+    def __getitem__(self, idx: int):
+        pre_path = pathlib.Path(self.all_files[idx])
+
+        split_root = pre_path.parent.parent  # .../<split>/
+        pre_stem = pre_path.stem             # "<base>_pre_disaster"
+
+        # Build matching names
+        base = pre_stem.replace("_pre_disaster", "")
+        post_path = split_root / "post" / f"{base}_post_disaster.tif"
+        tgt_path  = split_root / "target" / f"{base}_target.png"
+
+        # Read
+        img_pre  = cv2.imread(str(pre_path), cv2.IMREAD_COLOR)        
+        img_post = cv2.imread(str(post_path), cv2.IMREAD_COLOR)       
+        msk      = cv2.imread(str(tgt_path), cv2.IMREAD_UNCHANGED)    # PNG labels
+
+        if img_pre is None:
+            raise FileNotFoundError(f"Could not read pre image: {pre_path}")
+        if img_post is None:
+            raise FileNotFoundError(f"Could not read post image: {post_path}")
+        if msk is None:
+            raise FileNotFoundError(f"Could not read target mask: {tgt_path}")
+
+        # Stack time then permute: [T,H,W,C] -> [C,T,H,W]
+        img = np.stack([img_pre, img_post], axis=0)
         img = torch.from_numpy(img.transpose((3, 0, 1, 2))).float()
-        # img_pre = torch.from_numpy(img_pre.transpose((2, 0, 1))).float()
-        # img_post = torch.from_numpy(img_post.transpose((2, 0, 1))).float()
         msk = torch.from_numpy(msk).long()
 
-
-        return {
-            'image': {
-                    'optical': img,
-                    },
-            'target': msk,  
-            'metadata': {"filename":fn}
-        }
-
+        return {"image": {"optical": img}, "target": msk, "metadata": {"filename": str(pre_path)}}
 
     @staticmethod
     def download(self, silent=False):
@@ -257,7 +315,7 @@ if __name__=="__main__":
         multi_modal=False, 
         classes=["No building", "No damage","Minor damage","Major damage","Destroyed"],
         num_classes=5,
-        ignore_index=-1,
+        ignore_index=255,
         bands=["B4", "B3", "B2"],
         distribution = [0.9415, 0.0448, 0.0049, 0.0057, 0.0031],
         data_mean=[66.7703, 88.4452, 85.1047],
@@ -265,5 +323,7 @@ if __name__=="__main__":
         data_min=[0.0, 0.0, 0.0],
         data_max=[255, 255, 255],
     )
-    x,y = dataset[0]
+    sample = dataset[0]
+    x = sample["image"]
+    y = sample["target"]
     print(x["optical"].shape, y.shape)
