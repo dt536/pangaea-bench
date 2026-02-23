@@ -297,6 +297,7 @@ class xView2(RawGeoFMDataset):
         os.remove(output_path / temp_file_name)
 
 if __name__=="__main__":
+    print("Testing xView2 dataset loading...")
     # dataset = xView2(
     #     split="train", 
     #     dataset_name="xView2",
