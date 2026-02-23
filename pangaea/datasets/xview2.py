@@ -138,17 +138,20 @@ class xView2(RawGeoFMDataset):
     #     return all_files
 
     def get_all_files(self) -> Sequence[str]:
-    # Your directory structure:
-    # root/train/pre, root/train/post, root/train/target
-    # root/val/pre,   root/val/post,   root/val/target
-
-        split_dir = os.path.join(self.root_path, self.split)  # "train" or "val" or "test"
+        split_dir = os.path.join(self.root_path, self.split)
         pre_dir = os.path.join(split_dir, "pre")
 
-        all_files = []
-        for f in sorted(os.listdir(pre_dir)):
-            if f.endswith("_pre_disaster.tif"):
-                all_files.append(os.path.join(pre_dir, f))
+        all_files = [
+            os.path.join(pre_dir, f)
+            for f in sorted(os.listdir(pre_dir))
+            if f.endswith("_pre_disaster.tif")
+        ]
+
+        if self.split == "train" and self.oversample_building_damage:
+            train_idxs = np.arange(len(all_files))
+            train_idxs = self.oversample_building_files(all_files, train_idxs)
+            all_files = [all_files[i] for i in train_idxs]
+
         return all_files
 
     @staticmethod
@@ -233,6 +236,7 @@ class xView2(RawGeoFMDataset):
     #         'metadata': {"filename":fn}
     #     }
 
+    @staticmethod
     def read_tif_rgb(path: str) -> np.ndarray:
         with rasterio.open(path) as src:
             x = src.read(out_dtype=np.float32)  # (C,H,W)
@@ -240,7 +244,7 @@ class xView2(RawGeoFMDataset):
         return x
 
     def __getitem__(self, idx: int):
-        fn_pre = self.all_files[idx]  # ...\train\pre\xxx_pre_disaster.tif
+        fn_pre = self.all_files[idx]
 
         fn_post = fn_pre.replace(os.sep + "pre" + os.sep, os.sep + "post" + os.sep) \
                         .replace("_pre_disaster.tif", "_post_disaster.tif")
@@ -248,13 +252,20 @@ class xView2(RawGeoFMDataset):
         fn_mask = fn_pre.replace(os.sep + "pre" + os.sep, os.sep + "target" + os.sep) \
                         .replace("_pre_disaster.tif", "_target.png")
 
-        img_pre = self.read_tif_rgb(fn_pre)     # (H,W,3)
-        img_post = self.read_tif_rgb(fn_post)   # (H,W,3)
+        if not os.path.exists(fn_post):
+            raise FileNotFoundError(f"Missing post image:\n{fn_post}")
+        if not os.path.exists(fn_mask):
+            raise FileNotFoundError(f"Missing target mask:\n{fn_mask}")
 
-        msk = cv2.imread(fn_mask, cv2.IMREAD_UNCHANGED)  # (H,W), uint8
+        img_pre = self.read_tif_rgb(fn_pre)
+        img_post = self.read_tif_rgb(fn_post)
 
-        img = np.stack([img_pre, img_post], axis=0)               # (2,H,W,3)
-        img = torch.from_numpy(img).permute(3, 0, 1, 2).float()   # (3,2,HFover,W)
+        msk = cv2.imread(fn_mask, cv2.IMREAD_UNCHANGED)
+        if msk is None:
+            raise RuntimeError(f"cv2 failed to read mask:\n{fn_mask}")
+
+        img = np.stack([img_pre, img_post], axis=0)             # (2,H,W,3)
+        img = torch.from_numpy(img).permute(3, 0, 1, 2).float() # (3,2,H,W)
         msk = torch.from_numpy(msk).long()
 
         return {
