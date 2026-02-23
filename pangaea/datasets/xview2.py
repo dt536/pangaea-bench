@@ -14,6 +14,7 @@ from sklearn.model_selection import train_test_split
 import cv2
 import urllib
 import tarfile
+import rasterio
 
 from pangaea.datasets.utils import DownloadProgressBar
 from pangaea.datasets.base import RawGeoFMDataset
@@ -137,24 +138,17 @@ class xView2(RawGeoFMDataset):
     #     return all_files
 
     def get_all_files(self) -> Sequence[str]:
-        # custom split
-        split_dir = os.path.join(self.root_path, self.split)
+    # Your directory structure:
+    # root/train/pre, root/train/post, root/train/target
+    # root/val/pre,   root/val/post,   root/val/target
+
+        split_dir = os.path.join(self.root_path, self.split)  # "train" or "val" or "test"
         pre_dir = os.path.join(split_dir, "pre")
-        if not os.path.isdir(pre_dir):
-            raise FileNotFoundError(f"Missing pre/ folder: {pre_dir}")
 
-        exts = (".tif", ".tiff", ".TIF", ".TIFF")
-        all_files = [
-            os.path.join(pre_dir, f)
-            for f in sorted(os.listdir(pre_dir))
-            if f.endswith(exts) and "_pre_disaster" in f
-        ]
-
-        if self.split == "train" and self.oversample_building_damage:
-            train_idxs = np.arange(len(all_files))
-            train_idxs = self.oversample_building_files(all_files, train_idxs)
-            all_files = [all_files[i] for i in train_idxs]
-
+        all_files = []
+        for f in sorted(os.listdir(pre_dir)):
+            if f.endswith("_pre_disaster.tif"):
+                all_files.append(os.path.join(pre_dir, f))
         return all_files
 
     @staticmethod
@@ -179,13 +173,12 @@ class xView2(RawGeoFMDataset):
             if i in train_idxs: 
                 # msk1 = cv2.imread(fn.replace('/images/', '/masks/').replace('_pre_disaster', '_post_disaster'),
                 #                 cv2.IMREAD_UNCHANGED)
-                
-                p = pathlib.Path(fn)
-                split_root = p.parent.parent
-                base = p.stem.replace("_pre_disaster", "")
-                tgt_path = split_root / "target" / f"{base}_target.png"
 
-                msk1 = cv2.imread(str(tgt_path), cv2.IMREAD_UNCHANGED)
+                msk1_path = (
+                    fn.replace(os.sep + "pre" + os.sep, os.sep + "target" + os.sep)
+                    .replace("_pre_disaster.tif", "_target.png")
+                )
+                msk1 = cv2.imread(msk1_path, cv2.IMREAD_UNCHANGED)
 
                 for c in range(1, 5):
                     fl[c - 1] = c in msk1
@@ -240,35 +233,35 @@ class xView2(RawGeoFMDataset):
     #         'metadata': {"filename":fn}
     #     }
 
+    def read_tif_rgb(path: str) -> np.ndarray:
+        with rasterio.open(path) as src:
+            x = src.read(out_dtype=np.float32)  # (C,H,W)
+        x = np.transpose(x, (1, 2, 0))          # (H,W,C)
+        return x
+
     def __getitem__(self, idx: int):
-        pre_path = pathlib.Path(self.all_files[idx])
+        fn_pre = self.all_files[idx]  # ...\train\pre\xxx_pre_disaster.tif
 
-        split_root = pre_path.parent.parent  # .../<split>/
-        pre_stem = pre_path.stem             # "<base>_pre_disaster"
+        fn_post = fn_pre.replace(os.sep + "pre" + os.sep, os.sep + "post" + os.sep) \
+                        .replace("_pre_disaster.tif", "_post_disaster.tif")
 
-        # Build matching names
-        base = pre_stem.replace("_pre_disaster", "")
-        post_path = split_root / "post" / f"{base}_post_disaster.tif"
-        tgt_path  = split_root / "target" / f"{base}_target.png"
+        fn_mask = fn_pre.replace(os.sep + "pre" + os.sep, os.sep + "target" + os.sep) \
+                        .replace("_pre_disaster.tif", "_target.png")
 
-        # Read
-        img_pre  = cv2.imread(str(pre_path), cv2.IMREAD_COLOR)        
-        img_post = cv2.imread(str(post_path), cv2.IMREAD_COLOR)       
-        msk      = cv2.imread(str(tgt_path), cv2.IMREAD_UNCHANGED)    # PNG labels
+        img_pre = self.read_tif_rgb(fn_pre)     # (H,W,3)
+        img_post = self.read_tif_rgb(fn_post)   # (H,W,3)
 
-        if img_pre is None:
-            raise FileNotFoundError(f"Could not read pre image: {pre_path}")
-        if img_post is None:
-            raise FileNotFoundError(f"Could not read post image: {post_path}")
-        if msk is None:
-            raise FileNotFoundError(f"Could not read target mask: {tgt_path}")
+        msk = cv2.imread(fn_mask, cv2.IMREAD_UNCHANGED)  # (H,W), uint8
 
-        # Stack time then permute: [T,H,W,C] -> [C,T,H,W]
-        img = np.stack([img_pre, img_post], axis=0)
-        img = torch.from_numpy(img.transpose((3, 0, 1, 2))).float()
+        img = np.stack([img_pre, img_post], axis=0)               # (2,H,W,3)
+        img = torch.from_numpy(img).permute(3, 0, 1, 2).float()   # (3,2,HFover,W)
         msk = torch.from_numpy(msk).long()
 
-        return {"image": {"optical": img}, "target": msk, "metadata": {"filename": str(pre_path)}}
+        return {
+            "image": {"optical": img},
+            "target": msk,
+            "metadata": {"filename": fn_pre},
+        }
 
     @staticmethod
     def download(self, silent=False):
@@ -304,26 +297,26 @@ class xView2(RawGeoFMDataset):
         os.remove(output_path / temp_file_name)
 
 if __name__=="__main__":
-    dataset = xView2(
-        split="train", 
-        dataset_name="xView2",
-        root_path="./data/xView2",
-        download_url="https://the-dataset-is-not-publicly-available.com",
-        auto_download=False,
-        img_size=1024,
-        multi_temporal=False,
-        multi_modal=False, 
-        classes=["No building", "No damage","Minor damage","Major damage","Destroyed"],
-        num_classes=5,
-        ignore_index=255,
-        bands=["B4", "B3", "B2"],
-        distribution = [0.9415, 0.0448, 0.0049, 0.0057, 0.0031],
-        data_mean=[66.7703, 88.4452, 85.1047],
-        data_std=[48.3066, 51.9129, 62.7612],
-        data_min=[0.0, 0.0, 0.0],
-        data_max=[255, 255, 255],
-    )
-    sample = dataset[0]
-    x = sample["image"]
-    y = sample["target"]
-    print(x["optical"].shape, y.shape)
+    # dataset = xView2(
+    #     split="train", 
+    #     dataset_name="xView2",
+    #     root_path="./data/xView2",
+    #     download_url="https://the-dataset-is-not-publicly-available.com",
+    #     auto_download=False,
+    #     img_size=1024,
+    #     multi_temporal=False,
+    #     multi_modal=False, 
+    #     classes=["No building", "No damage","Minor damage","Major damage","Destroyed"],
+    #     num_classes=5,
+    #     ignore_index=255,
+    #     bands=["B4", "B3", "B2"],
+    #     distribution = [0.9415, 0.0448, 0.0049, 0.0057, 0.0031],
+    #     data_mean=[66.7703, 88.4452, 85.1047],
+    #     data_std=[48.3066, 51.9129, 62.7612],
+    #     data_min=[0.0, 0.0, 0.0],
+    #     data_max=[255, 255, 255],
+    # )
+    # sample = dataset[0]
+    # x = sample["image"]
+    # y = sample["target"]
+    # print(x["optical"].shape, y.shape)
