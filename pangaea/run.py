@@ -90,7 +90,7 @@ def export_transfer_pred_tifs_sliding(
         image = data["image"]
         image = {k: v.to(evaluator.device, non_blocking=True) for k, v in image.items()}
 
-        filenames = [m["filename"] for m in data["metadata"]]
+        filenames = data["metadata"]["filename"]
         if isinstance(filenames, (str, pathlib.Path)):
             filenames = [str(filenames)]
 
@@ -110,22 +110,27 @@ def export_transfer_pred_tifs_sliding(
             src_path = pathlib.Path(fn_pre)
 
             with rasterio.open(src_path) as src:
-                profile = src.profile.copy()
                 H, W = src.height, src.width
 
                 arr = pred[i].detach().cpu().numpy()
 
-                # Safety: resize if any mismatch
                 if arr.shape != (H, W):
                     arr_t = torch.from_numpy(arr)[None, None].float()
-                    arr = torch.nn.functional.interpolate(arr_t, size=(H, W), mode="nearest")[0, 0].byte().numpy()
+                    arr = torch.nn.functional.interpolate(
+                        arr_t, size=(H, W), mode="nearest"
+                    )[0, 0].byte().numpy()
 
-                out_profile = profile.copy()
-                out_profile.update(
-                    count=1,
-                    dtype=rasterio.uint8,
-                    compress="deflate",
-                )
+                # CLEAN profile: keep only georeferencing + size
+                out_profile = {
+                    "driver": "GTiff",
+                    "height": H,
+                    "width": W,
+                    "count": 1,
+                    "dtype": rasterio.uint8,
+                    "crs": src.crs,
+                    "transform": src.transform,
+                    "compress": "deflate",
+                }
 
                 out_path = out_dir / f"{src_path.stem}_pred.tif"
                 with rasterio.open(out_path, "w", **out_profile) as dst:
