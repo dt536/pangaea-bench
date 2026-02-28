@@ -90,7 +90,7 @@ def export_transfer_pred_tifs_sliding(
         image = data["image"]
         image = {k: v.to(evaluator.device, non_blocking=True) for k, v in image.items()}
 
-        filenames = data["metadata"]["filename"]
+        filenames = [m["filename"] for m in data["metadata"]]
         if isinstance(filenames, (str, pathlib.Path)):
             filenames = [str(filenames)]
 
