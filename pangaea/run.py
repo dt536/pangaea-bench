@@ -381,10 +381,10 @@ def main(cfg: DictConfig) -> None:
         raise ValueError(f"No model checkpoint found in {exp_dir}")
 
     # --- normal test metrics (may fail if dataset has no target) ---
-    try:
-        test_evaluator.evaluate(decoder, "test_model", model_ckpt_path)
-    except KeyError as e:
-        logger.warning(f"Skipping test metrics (missing key in batch): {e}")
+    # try:
+    #     test_evaluator.evaluate(decoder, "test_model", model_ckpt_path)
+    # except KeyError as e:
+    #     logger.warning(f"Skipping test metrics (missing key in batch): {e}")
 
     # ------------------------------------------------------------
     # Transfer export
