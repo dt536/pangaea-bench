@@ -3,6 +3,8 @@ seed: 234
 use_wandb: false
 
 # EXPERIMENT
+use_final_ckpt: false
+finetune: false
 ckpt_dir: ???
 
 # TRANSFER TEST
@@ -10,3 +12,4 @@ transfer:
   enabled: false
   out_dir: ${work_dir}/transfer_outputs
   ckpt_dir: ???
+
