@@ -11,5 +11,3 @@ ckpt_dir: ???
 transfer:
   enabled: false
   out_dir: ${work_dir}/transfer_outputs
-  ckpt_dir: ???
-
