@@ -3,6 +3,9 @@ import os as os
 import pathlib
 import pprint
 import time
+import numpy as np
+import rasterio
+from tqdm import tqdm
 
 import hydra
 import torch
@@ -58,6 +61,77 @@ def get_exp_info(hydra_config: HydraConf) -> dict[str, str]:
     }
     return exp_info
 
+@torch.no_grad()
+def export_transfer_pred_tifs_sliding(
+    *,
+    model,                 # your DDP decoder
+    loader: DataLoader,    # transfer_loader
+    evaluator: Evaluator,  # SegEvaluator instance 
+    out_dir: pathlib.Path,
+    rank: int,
+    logger,
+):
+    """
+    Writes GeoTIFF prediction maps (*_pred.tif) with values 0..4
+
+    Expects dataset batch:
+      data["image"] is dict of modalities
+      data["metadata"]["filename"] is the pre-image tif path (string or list of strings)
+    """
+    if rank != 0:
+        return  # only rank0 writes files
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    model.eval()
+    input_size = model.module.encoder.input_size  # 224
+
+    for data in tqdm(loader, desc="Transfer export (pred tifs)"):
+        image = data["image"]
+        image = {k: v.to(evaluator.device, non_blocking=True) for k, v in image.items()}
+
+        filenames = data["metadata"]["filename"]
+        if isinstance(filenames, (str, pathlib.Path)):
+            filenames = [str(filenames)]
+
+        # EXACT same inference pathway as metrics (sliding + merge)
+        logits = evaluator.sliding_inference(
+            model,
+            image,
+            input_size=input_size,
+            output_shape=None,  # keep native size (should be 1024x1024)
+            max_batch=getattr(evaluator, "sliding_inference_batch", None),
+        )
+
+        # multi-class => 0..4
+        pred = torch.argmax(logits, dim=1).to(torch.uint8)  # [B,H,W]
+
+        for i, fn_pre in enumerate(filenames):
+            src_path = pathlib.Path(fn_pre)
+
+            with rasterio.open(src_path) as src:
+                profile = src.profile.copy()
+                H, W = src.height, src.width
+
+                arr = pred[i].detach().cpu().numpy()
+
+                # Safety: resize if any mismatch
+                if arr.shape != (H, W):
+                    arr_t = torch.from_numpy(arr)[None, None].float()
+                    arr = torch.nn.functional.interpolate(arr_t, size=(H, W), mode="nearest")[0, 0].byte().numpy()
+
+                out_profile = profile.copy()
+                out_profile.update(
+                    count=1,
+                    dtype=rasterio.uint8,
+                    compress="deflate",
+                )
+
+                out_path = out_dir / f"{src_path.stem}_pred.tif"
+                with rasterio.open(out_path, "w", **out_profile) as dst:
+                    dst.write(arr, 1)
+
+            logger.info(f"[transfer] wrote {out_path}")
 
 @hydra.main(version_base=None, config_path="../configs", config_name="train")
 def main(cfg: DictConfig) -> None:
@@ -297,7 +371,64 @@ def main(cfg: DictConfig) -> None:
     if model_ckpt_path is None and not cfg.task.trainer.model_name == "knn_probe":
         raise ValueError(f"No model checkpoint found in {exp_dir}")
     
-    test_evaluator.evaluate(decoder, "test_model", model_ckpt_path)
+        # --- choose checkpoint path as you already do ---
+    if cfg.use_final_ckpt:
+        model_ckpt_path = get_final_model_ckpt_path(exp_dir)
+    else:
+        model_ckpt_path = get_best_model_ckpt_path(exp_dir)
+
+    if model_ckpt_path is None and not cfg.task.trainer.model_name == "knn_probe":
+        raise ValueError(f"No model checkpoint found in {exp_dir}")
+
+    # --- normal test metrics (may fail if dataset has no target) ---
+    try:
+        test_evaluator.evaluate(decoder, "test_model", model_ckpt_path)
+    except KeyError as e:
+        logger.warning(f"Skipping test metrics (missing key in batch): {e}")
+
+    # ------------------------------------------------------------
+    # Transfer export
+    # ------------------------------------------------------------
+    if cfg.get("transfer", {}).get("enabled", False):
+        out_dir = pathlib.Path(cfg.transfer.out_dir)
+
+        # Build transfer dataset/loader
+        transfer_preprocessor = instantiate(
+            cfg.preprocessing.test,
+            dataset_cfg=cfg.dataset,
+            encoder_cfg=cfg.encoder,
+            _recursive_=False,
+        )
+        raw_transfer_dataset: RawGeoFMDataset = instantiate(cfg.dataset, split="test")
+        transfer_dataset = GeoFMDataset(raw_transfer_dataset, transfer_preprocessor)
+
+        transfer_loader = DataLoader(
+            transfer_dataset,
+            sampler=DistributedSampler(transfer_dataset),
+            batch_size=cfg.test_batch_size,
+            num_workers=cfg.test_num_workers,
+            pin_memory=True,
+            persistent_workers=False,
+            drop_last=False,
+            collate_fn=collate_fn,
+        )
+
+        # ensure weights are loaded 
+        model_dict = torch.load(model_ckpt_path, map_location=device, weights_only=False)
+        if "model" in model_dict:
+            decoder.module.load_state_dict(model_dict["model"])
+        else:
+            decoder.module.load_state_dict(model_dict)
+        logger.info(f"[transfer] Loaded {model_ckpt_path} into decoder for export")
+
+        export_transfer_pred_tifs_sliding(
+            model=decoder,
+            loader=transfer_loader,
+            evaluator=test_evaluator,  
+            out_dir=out_dir,
+            rank=rank,
+            logger=logger,
+        )
 
     if cfg.use_wandb and rank == 0:
         wandb.finish()
