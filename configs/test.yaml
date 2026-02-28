@@ -2,7 +2,11 @@ train: false
 seed: 234
 use_wandb: false
 
+# EXPERIMENT
+ckpt_dir: ???
+
 # TRANSFER TEST
 transfer:
   enabled: false
   out_dir: ${work_dir}/transfer_outputs
+  ckpt_dir: ???
