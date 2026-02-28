@@ -17,3 +17,15 @@ ckpt_dir: ???
 transfer:
   enabled: false
   out_dir: ${work_dir}/transfer_outputs
+
+
+defaults:
+  - task: ???
+  - dataset: ???
+  - encoder: ???
+  - decoder: ???
+  - preprocessing: ???
+  - criterion: ???
+  - lr_scheduler: multi_step_lr
+  - optimizer: adamw
+  - _self_ 
