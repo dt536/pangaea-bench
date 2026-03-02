@@ -10,4 +10,6 @@ ckpt_dir: ???
 # TRANSFER TEST
 transfer:
   enabled: false
+  dataset: ???
   out_dir: ${work_dir}/transfer_outputs
+
