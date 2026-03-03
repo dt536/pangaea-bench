@@ -1,12 +1,12 @@
 _target_: pangaea.datasets.earthquake.earthquake
 dataset_name: earthquake
-root_path: C:\Users\Student\Documents\IIB\xbd
+root_path: ???/earthquake
 download_url: https://the-dataset-is-not-publicly-available.com
 auto_download: False
 img_size: 1024
 multi_temporal: False
 multi_modal: False
-oversample_building_damage: True
+oversample_building_damage: False
 
 # classes
 ignore_index: 255
