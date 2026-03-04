@@ -160,10 +160,7 @@ class earthquake(RawGeoFMDataset):
         return {
             "image": {"optical": img},
             "target": msk,
-            "metadata": {
-                "filename_pre": fn_pre,
-                "filename_post": fn_post,
-            },
+            "metadata": {"filename": fn_pre},
         }
 
 if __name__=="__main__":
