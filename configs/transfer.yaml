@@ -1,0 +1,24 @@
+train: false
+seed: 234
+use_wandb: false
+
+# EXPERIMENT
+ckpt_dir: ???
+use_final_ckpt: false
+finetune: false
+run_test_metrics: false
+
+# Use a different dataset for the transfer loader
+transfer:
+  enabled: true
+  dataset: ??
+  work_dir: ?? 
+  out_dir: ${work_dir}/transfer_outputs
+
+# override dataset to be transfer dataset (so downstream uses it)
+dataset: ${transfer.dataset}
+work_dir: ${transfer.work_dir}
+
+test_batch_size: 1
+test_num_workers: 0
+task.evaluator.sliding_inference_batch: 1
