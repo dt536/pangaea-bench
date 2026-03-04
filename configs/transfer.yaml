@@ -11,8 +11,8 @@ run_test_metrics: false
 # Use a different dataset for the transfer loader
 transfer:
   enabled: true
-  dataset: ??
-  work_dir: ?? 
+  dataset: ???
+  work_dir: ???
   out_dir: ${work_dir}/transfer_outputs
 
 # override dataset to be transfer dataset (so downstream uses it)

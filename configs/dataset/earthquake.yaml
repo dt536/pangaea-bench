@@ -1,6 +1,6 @@
 _target_: pangaea.datasets.earthquake.earthquake
 dataset_name: earthquake
-root_path: ???/earthquake
+root_path: ???
 download_url: https://the-dataset-is-not-publicly-available.com
 auto_download: False
 img_size: 1024
