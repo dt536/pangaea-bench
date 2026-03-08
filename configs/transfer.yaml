@@ -24,3 +24,8 @@ task:
   evaluator:
     remap_classes: false
     sliding_inference_batch: 1
+    eval_classes:
+      - background
+      - intact
+      - damaged
+      - destroyed

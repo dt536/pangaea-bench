@@ -410,9 +410,19 @@ class SegEvaluator(Evaluator):
             sliding_inference_batch: int = None,
             use_wandb: bool = False,
             remap_classes: bool = False,  # Whether to remap 5 damage classes to 4
+            eval_classes: list[str] | None = None,
     ):
         super().__init__(val_loader, exp_dir, device, inference_mode, sliding_inference_batch, use_wandb)
         self.remap_classes = remap_classes
+
+        self.remap_classes = remap_classes
+
+        if self.remap_classes and eval_classes is not None:
+            self.classes = eval_classes
+            self.valid_classes = eval_classes
+            self.num_classes = len(eval_classes)
+            self.valid_class_indices = list(range(self.num_classes))
+            self.max_name_len = max(len(c) for c in eval_classes)
 
     @torch.no_grad()
     def evaluate(self, model, model_name='model', model_ckpt_path=None):

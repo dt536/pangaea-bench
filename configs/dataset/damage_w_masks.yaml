@@ -10,7 +10,7 @@ oversample_building_damage: False
 
 # classes
 ignore_index: 255
-num_classes: 4
+num_classes: 5
 classes:
   - No building
   - Intact
