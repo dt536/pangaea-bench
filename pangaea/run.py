@@ -31,6 +31,7 @@ from pangaea.utils.utils import (
     get_generator,
     seed_worker,
 )
+from pangaea.utils.label_mapping import map_damage_5_to_4
 
 
 def get_exp_info(hydra_config: HydraConf) -> dict[str, str]:
@@ -104,7 +105,13 @@ def export_transfer_pred_tifs_sliding(
         )
 
         # multi-class => 0..4
-        pred = torch.argmax(logits, dim=1).to(torch.uint8)  # [B,H,W]
+        pred = torch.argmax(logits, dim=1)
+        
+        # remap to 0..3 optionally
+        if getattr(evaluator, "remap_classes", False):
+            pred = map_damage_5_to_4(pred)
+
+        pred = pred.to(torch.uint8)
 
         for i, fn_pre in enumerate(filenames):
             src_path = pathlib.Path(fn_pre)
@@ -374,15 +381,6 @@ def main(cfg: DictConfig) -> None:
     else:
         model_ckpt_path = get_best_model_ckpt_path(exp_dir)
         
-    if model_ckpt_path is None and not cfg.task.trainer.model_name == "knn_probe":
-        raise ValueError(f"No model checkpoint found in {exp_dir}")
-    
-        # --- choose checkpoint path as you already do ---
-    if cfg.use_final_ckpt:
-        model_ckpt_path = get_final_model_ckpt_path(exp_dir)
-    else:
-        model_ckpt_path = get_best_model_ckpt_path(exp_dir)
-
     if model_ckpt_path is None and not cfg.task.trainer.model_name == "knn_probe":
         raise ValueError(f"No model checkpoint found in {exp_dir}")
 

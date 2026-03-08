@@ -19,4 +19,8 @@ transfer:
 
 test_batch_size: 1
 test_num_workers: 0
-task.evaluator.sliding_inference_batch: 1
+
+task:
+  evaluator:
+    remap_classes: true
+    sliding_inference_batch: 1

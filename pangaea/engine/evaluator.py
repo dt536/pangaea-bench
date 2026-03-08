@@ -13,6 +13,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from pangaea.decoders.knnclassifier import KNNClassifier
 from tqdm import tqdm
+from pangaea.utils.label_mapping import map_damage_5_to_4
 
 
 class Evaluator:
@@ -408,8 +409,10 @@ class SegEvaluator(Evaluator):
             inference_mode: str = 'sliding',
             sliding_inference_batch: int = None,
             use_wandb: bool = False,
+            remap_classes: bool = False,  # Whether to remap 5 damage classes to 4
     ):
         super().__init__(val_loader, exp_dir, device, inference_mode, sliding_inference_batch, use_wandb)
+        self.remap_classes = remap_classes
 
     @torch.no_grad()
     def evaluate(self, model, model_name='model', model_ckpt_path=None):
@@ -449,6 +452,12 @@ class SegEvaluator(Evaluator):
                 pred = (torch.sigmoid(logits) > 0.5).type(torch.int64).squeeze(dim=1)
             else:
                 pred = torch.argmax(logits, dim=1)
+                # remaps to 4 classes if the model outputs 5 classes (for damage classification)
+                if self.remap_classes:
+                    pred = map_damage_5_to_4(pred)
+                else:
+                    pred = pred.to(torch.int64)
+
             valid_mask = target != self.ignore_index
             pred, target = pred[valid_mask], target[valid_mask]
             count = torch.bincount(
