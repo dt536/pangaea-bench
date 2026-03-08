@@ -22,5 +22,5 @@ test_num_workers: 0
 
 task:
   evaluator:
-    remap_classes: true
+    remap_classes: false
     sliding_inference_batch: 1
