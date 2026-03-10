@@ -109,11 +109,11 @@ class earthquake(RawGeoFMDataset):
         all_files = [
             os.path.join(pre_dir, f)
             for f in sorted(os.listdir(pre_dir))
-            if re.match(r"^pre_r\d+_c\d+\.tif$", f, flags=re.IGNORECASE)
+            if f.endswith("_pre_disaster.tif")
         ]
 
         if len(all_files) == 0:
-            raise RuntimeError(f"No pre_rX_cY.tif files found in {pre_dir}")
+            raise RuntimeError(f"No pre_disaster.tif files found in {pre_dir}")
 
         return all_files
 
@@ -132,11 +132,8 @@ class earthquake(RawGeoFMDataset):
         fn_pre = self.all_files[idx]
 
         # Build matching post filename
-        fn_post = fn_pre.replace(os.sep + "pre" + os.sep, os.sep + "post" + os.sep)
-        fn_post = os.path.join(
-            os.path.dirname(fn_post),
-            os.path.basename(fn_post).replace("pre_", "post_", 1),
-        )
+        fn_post = fn_pre.replace(os.sep + "pre" + os.sep, os.sep + "post" + os.sep) \
+                        .replace("_pre_disaster.tif", "_post_disaster.tif")
 
         if not os.path.exists(fn_post):
             raise FileNotFoundError(f"Missing post image:\n{fn_post}")
@@ -144,7 +141,6 @@ class earthquake(RawGeoFMDataset):
         img_pre = self.read_tif_rgb(fn_pre)
         img_post = self.read_tif_rgb(fn_post)
 
-        # Only keep this if your pipeline expects BGR ordering
         img_pre = img_pre[..., ::-1].copy()
         img_post = img_post[..., ::-1].copy()
 

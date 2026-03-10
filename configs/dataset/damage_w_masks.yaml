@@ -12,10 +12,10 @@ oversample_building_damage: False
 ignore_index: 255
 num_classes: 5
 classes:
-  - No building
-  - Intact
-  - Damaged
-  - Destroyed
+    - background
+    - intact
+    - damaged
+    - destroyed
 distribution:
   - 0.9415
   - 0.0448
