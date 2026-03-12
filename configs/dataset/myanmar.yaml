@@ -1,12 +1,12 @@
-_target_: pangaea.datasets.xview2.xView2
-dataset_name: xView2
-root_path: C:\Users\Student\Documents\IIB\xbd
+_target_: pangaea.datasets.earthquake.earthquake
+dataset_name: myanmar
+root_path: ???
 download_url: https://the-dataset-is-not-publicly-available.com
 auto_download: False
 img_size: 1024
 multi_temporal: False
 multi_modal: False
-oversample_building_damage: True
+oversample_building_damage: False
 
 # classes
 ignore_index: 255
@@ -31,14 +31,14 @@ bands:
     - B2
 data_mean:
   optical:
-    - 78.6722
-    - 86.8014
-    - 64.9793
+    - 106.1442
+    - 96.6622
+    - 88.5553
 data_std:
   optical:
-    - 41.3758
-    - 36.7290
-    - 34.5200
+    - 56.2555
+    - 46.2361
+    - 42.6129
 data_min:
   optical: [0.0, 0.0, 0.0]
 data_max:
