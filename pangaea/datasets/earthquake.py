@@ -141,8 +141,8 @@ class earthquake(RawGeoFMDataset):
         img_pre = self.read_tif_rgb(fn_pre)
         img_post = self.read_tif_rgb(fn_post)
 
-        img_pre = img_pre[..., ::-1].copy()
-        img_post = img_post[..., ::-1].copy()
+        # img_pre = img_pre[..., ::-1].copy()
+        # img_post = img_post[..., ::-1].copy()
 
         # Stack temporal dimension
         # (2, H, W, C) → (C, 2, H, W)
