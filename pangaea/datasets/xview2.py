@@ -260,8 +260,8 @@ class xView2(RawGeoFMDataset):
         img_pre = self.read_tif_rgb(fn_pre)
         img_post = self.read_tif_rgb(fn_post)
 
-        # img_pre = img_pre[..., ::-1].copy()
-        # img_post = img_post[..., ::-1].copy()
+        img_pre = img_pre[..., ::-1].copy()
+        img_post = img_post[..., ::-1].copy()
 
         msk = cv2.imread(fn_mask, cv2.IMREAD_UNCHANGED)
         if msk is None:
