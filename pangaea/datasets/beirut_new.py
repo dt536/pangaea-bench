@@ -192,6 +192,9 @@ class BeirutNewDataset(RawGeoFMDataset):
         img_pre = cv2.imread(fn_pre, cv2.IMREAD_COLOR)
         img_post = cv2.imread(fn_post, cv2.IMREAD_COLOR)
 
+        img_pre = cv2.cvtColor(img_pre, cv2.COLOR_BGR2RGB)
+        img_post = cv2.cvtColor(img_post, cv2.COLOR_BGR2RGB)
+
 
         #msk_pre = cv2.imread(fn.replace('/images/', '/masks/'), cv2.IMREAD_UNCHANGED)
         msk_post = cv2.imread(fn_mask, cv2.IMREAD_UNCHANGED)
