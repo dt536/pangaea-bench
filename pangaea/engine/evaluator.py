@@ -415,8 +415,6 @@ class SegEvaluator(Evaluator):
         super().__init__(val_loader, exp_dir, device, inference_mode, sliding_inference_batch, use_wandb)
         self.remap_classes = remap_classes
 
-        self.remap_classes = remap_classes
-
         if self.remap_classes and eval_classes is not None:
             self.classes = eval_classes
             self.valid_classes = eval_classes
@@ -496,8 +494,8 @@ class SegEvaluator(Evaluator):
         iou = (intersection / (union + 1e-6)) * 100
 
         # Calculate precision and recall for each class
-        precision = intersection / (confusion_matrix.sum(dim=0) + 1e-6) * 100
-        recall = intersection / (confusion_matrix.sum(dim=1) + 1e-6) * 100
+        precision = intersection / (confusion_matrix.sum(dim=1) + 1e-6) * 100
+        recall = intersection / (confusion_matrix.sum(dim=0) + 1e-6) * 100
 
         # Calculate F1-score for each class
         f1 = 2 * (precision * recall) / (precision + recall + 1e-6)
