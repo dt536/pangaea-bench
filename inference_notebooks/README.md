@@ -46,7 +46,7 @@ The `test.zip` file should contain two required folders and one optional folder:
 test.zip
 ├── pre/
 ├── post/
-└── target/   # optional; required only for metric calculation
+└── target/   # optional; required only for metric calculation, should be png files
 ```
 
 The files in each folder should share a common key, with suffixes indicating the image type:
@@ -72,7 +72,7 @@ post/
 └── tile_001_post_disaster.tif
 
 target/
-└── tile_001_target.tif
+└── tile_001_target.png
 ```
 
 The `pre` and `post` folders are required for inference. The `target` folder is optional and is only needed when calculating evaluation metrics.
