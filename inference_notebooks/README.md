@@ -1,6 +1,8 @@
 ## Cross-Disaster Inference Notebooks
 
 This folder contains the Google Colab notebooks used for cross-disaster inference. Trained model checkpoints have not yet been uploaded.
+> **Note:** Some GitHub browsers may not render the Colab notebooks correctly. If a notebook preview fails to load, use the **Open in Colab** link provided to open and run the notebook directly in Google Colab.
+
 Myanmar: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](
 https://colab.research.google.com/github/dt536/pangaea-bench/blob/main/inference_notebooks/myanmar_inference.ipynb
 )
