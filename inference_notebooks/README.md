@@ -1,8 +1,20 @@
 ## Cross-Disaster Inference Notebooks
 
 This folder contains the Google Colab notebooks used for cross-disaster inference. Trained model checkpoints have not yet been uploaded.
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](
+Myanmar: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](
+https://colab.research.google.com/github/dt536/pangaea-bench/blob/main/inference_notebooks/myanmar_inference.ipynb
+)
+Haiti: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](
 https://colab.research.google.com/github/dt536/pangaea-bench/blob/main/inference_notebooks/haiti_inference.ipynb
+)
+Turkey: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](
+https://colab.research.google.com/github/dt536/pangaea-bench/blob/main/inference_notebooks/turkey_inference.ipynb
+)
+Beirut 4 class: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](
+https://colab.research.google.com/github/dt536/pangaea-bench/blob/main/inference_notebooks/metrics_for_beirut_4.ipynb
+)
+Beirut 5 class: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](
+https://colab.research.google.com/github/dt536/pangaea-bench/blob/main/inference_notebooks/metrics_for_beirut_5.ipynb
 )
 
 ### Myanmar and Haiti
