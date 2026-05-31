@@ -1,6 +1,9 @@
 ## Cross-Disaster Inference Notebooks
 
 This folder contains the Google Colab notebooks used for cross-disaster inference. Trained model checkpoints have not yet been uploaded.
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](
+https://colab.research.google.com/github/dt536/pangaea-bench/blob/main/inference_notebooks/haiti_inference.ipynb
+)
 
 ### Myanmar and Haiti
 
