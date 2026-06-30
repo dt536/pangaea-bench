@@ -1,6 +1,6 @@
 ## Cross-Disaster Inference Notebooks
 
-This folder contains the Google Colab notebooks used for cross-disaster inference. Trained model checkpoints have not yet been uploaded.
+This folder contains the Google Colab notebooks used for cross-disaster inference. Trained model checkpoints and image data are not uploaded here.
 > **Note:** Some GitHub browsers may not render the Colab notebooks correctly. If a notebook preview fails to load, use the **Open in Colab** link provided to open and run the notebook directly in Google Colab.
 
 Myanmar: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](
@@ -93,3 +93,16 @@ target/
 ```
 
 The `pre` and `post` folders are required for inference. The `target` folder is optional and is only needed when calculating evaluation metrics.
+
+### Model Checkpoints
+
+Each inference notebook contains separate setup cells for loading the different trained models (U-Net, DOFA frozen, DOFA finetuned). Run the setup cell corresponding to the model you wish to use.
+
+In each case, set the `ckpt_dir` variable to the directory containing the desired checkpoint. For example:
+
+```python
+ckpt_dir = "/content/drive/MyDrive/20260318_041159_88ccf5_dofa_seg_siamupernet_conc_xview2"
+```
+
+The checkpoint directory should contain the trained model checkpoint(s) (`checkpoint__best.pth`) together with the associated `configs` directory generated during training. The notebook automatically loads the checkpoint and its corresponding configuration from this directory.
+
